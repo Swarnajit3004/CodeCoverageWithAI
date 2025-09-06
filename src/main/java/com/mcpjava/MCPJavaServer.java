@@ -1,58 +1,89 @@
 package com.mcpjava;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.supportmethods.PromptTool;
+import org.glassfish.tyrus.server.Server;
+
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
-import org.glassfish.tyrus.server.Server;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
-@ServerEndpoint(value = "/")
+@ServerEndpoint("/")
 public class MCPJavaServer {
+
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @OnOpen
     public void onOpen(Session session) {
-        System.out.println("✅ Client connected");
+        System.out.println("✅ MCP Client connected: " + session.getId());
     }
 
     @OnMessage
-    public String onMessage(String message, Session session) throws Exception {
+    public void onMessage(String message, Session session) throws IOException {
         System.out.println("📩 Received: " + message);
 
-        ObjectNode json = (ObjectNode) mapper.readTree(message);
+        Map<String, Object> request = mapper.readValue(message, Map.class);
+        Map<String, Object> response = new HashMap<>();
 
-        if (json.has("method") && "initialize".equals(json.get("method").asText())) {
-            // Respond to initialize
-            ObjectNode resp = mapper.createObjectNode();
-            resp.put("jsonrpc", "2.0");
-            resp.put("id", json.get("id").asInt());
-            ObjectNode result = mapper.createObjectNode();
-            result.put("serverName", "Java MCP Server");
-            result.put("version", "1.0.0");
-            resp.set("result", result);
-            return resp.toString();
+        String method = (String) request.get("method");
+        Object id = request.get("id");
+        response.put("jsonrpc", "2.0");
+        response.put("id", id);
+
+        try {
+            switch (method) {
+                case "prompts/get": {
+                    Map<String, Object> params = (Map<String, Object>) request.get("params");
+                    String name = params != null ? (String) params.get("name") : null;
+                    String user = params != null && params.get("user") != null
+                            ? params.get("user").toString()
+                            : "developer";
+
+                    response.putAll(PromptTool.getPrompt(name, user));
+                    break;
+                }
+
+                case "tools/call": {
+                    Map<String, Object> params = (Map<String, Object>) request.get("params");
+                    String toolName = params != null ? (String) params.get("tool") : null;
+                    Map<String, Object> args = params != null
+                            ? (Map<String, Object>) params.get("arguments")
+                            : new HashMap<>();
+
+                    Map<String, String> toolResponse = new HashMap<>();
+                    toolResponse.put("result", "🔧 Tool " + toolName + " executed with args " + args);
+
+                    response.putAll(toolResponse);
+                    break;
+                }
+
+                default:
+                    response.put("error", "Unknown method: " + method);
+            }
+        } catch (Exception e) {
+            response.put("error", "Exception: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        if (json.has("method") && "prompts/get".equals(json.get("method").asText())) {
-            // Handle custom prompt (repoGreeting)
-            ObjectNode resp = mapper.createObjectNode();
-            resp.put("jsonrpc", "2.0");
-            resp.put("id", json.get("id").asInt());
-            ObjectNode result = mapper.createObjectNode();
-            result.put("text", "👋 Hello from Java MCP inside your repo!");
-            resp.set("result", result);
-            return resp.toString();
-        }
-
-        return null; // no response
+        String jsonResponse = mapper.writeValueAsString(response);
+        System.out.println("📤 Sending: " + jsonResponse);
+        session.getAsyncRemote().sendText(jsonResponse);
     }
 
     @OnClose
     public void onClose(Session session) {
-        System.out.println("❌ Client disconnected");
+        System.out.println("❌ MCP Client disconnected: " + session.getId());
     }
 
-    public static void main(String[] args) {
+    @OnError
+    public void onError(Session session, Throwable throwable) {
+        System.err.println("💥 Error: " + throwable.getMessage());
+        throwable.printStackTrace();
+    }
+
+public static void main(String[] args) {
         Server server = new Server("localhost", 3000, "/", null, MCPJavaServer.class);
         try {
             server.start();

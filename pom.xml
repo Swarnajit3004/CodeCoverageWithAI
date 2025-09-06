@@ -138,6 +138,15 @@
                     <mainClass>com.mcpjava.MCPJavaServer</mainClass>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <!-- Default class to run -->
+                    <mainClass>com.mcpjava.MCPJavaServer</mainClass>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
