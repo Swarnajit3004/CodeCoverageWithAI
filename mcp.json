@@ -1,8 +1,0 @@
-{
-  "endpoint": "wss://your-ngrok-url/",
-  "prompts": ["repoGreeting"],
-  "tools": [
-    { "name": "readFile", "arguments": { "path": "string" } },
-    { "name": "execCommand", "arguments": { "command": "string" } }
-  ]
-}

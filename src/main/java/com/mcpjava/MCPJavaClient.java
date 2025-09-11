@@ -1,97 +1,76 @@
 package com.mcpjava;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import javax.websocket.*;
+import jakarta.websocket.*;
 import java.net.URI;
-import java.util.Scanner;
+import java.util.Collections;
 
-@ClientEndpoint
-public class MCPJavaClient {
+public class MCPJavaClient extends Endpoint {
 
-    private static Session session;
-    private static ObjectMapper mapper = new ObjectMapper();
-    private static int requestId = 1;
+    private Session session;
 
-    public static void main(String[] args) throws Exception {
-        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-        session = container.connectToServer(MCPJavaClient.class, new URI("ws://localhost:3000"));
+    @Override
+    public void onOpen(Session session, EndpointConfig config) {
+        this.session = session;
+        System.out.println("✅ Connected to GitHub Copilot MCP");
 
-        Scanner scanner = new Scanner(System.in);
-        boolean running = true;
-
-        while (running) {
-            System.out.println("Choose action (prompt/tool/exit): ");
-            String action = scanner.nextLine();
-
-            switch (action.toLowerCase()) {
-                case "prompt":
-                    System.out.print("Enter prompt name: ");
-                    String promptName = scanner.nextLine();
-                    System.out.print("Enter user name: ");
-                    String userName = scanner.nextLine();
-                    sendPrompt(promptName, userName);
-                    break;
-
-                case "tool":
-                    System.out.print("Enter tool name: ");
-                    String toolName = scanner.nextLine();
-                    System.out.print("Enter arg key: ");
-                    String key = scanner.nextLine();
-                    System.out.print("Enter arg value: ");
-                    String value = scanner.nextLine();
-                    sendTool(toolName, key, value);
-                    break;
-
-                case "exit":
-                    running = false;
-                    break;
-
-                default:
-                    System.out.println("❌ Invalid choice. Try again.");
+        // Example: send initialize request
+        String initRequest = """
+        {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "clientInfo": {
+              "name": "mcp-java-client",
+              "version": "1.0.0"
             }
+          }
         }
-
-        scanner.close();
-        session.close();
+        """;
+        session.getAsyncRemote().sendText(initRequest);
     }
 
-    private static void sendPrompt(String promptName, String user) throws Exception {
-        ObjectNode req = mapper.createObjectNode();
-        req.put("jsonrpc", "2.0");
-        req.put("id", requestId++);
-        req.put("method", "prompts/get");
-
-        ObjectNode params = mapper.createObjectNode();
-        params.put("name", promptName);
-        params.put("user", user);
-
-        req.set("params", params);
-
-        session.getAsyncRemote().sendText(req.toString());
+    @Override
+    public void onClose(Session session, CloseReason closeReason) {
+        System.out.println("❌ Connection closed: " + closeReason);
     }
 
-    private static void sendTool(String toolName, String argKey, String argValue) throws Exception {
-        ObjectNode req = mapper.createObjectNode();
-        req.put("jsonrpc", "2.0");
-        req.put("id", requestId++);
-        req.put("method", "tools/call");
-
-        ObjectNode params = mapper.createObjectNode();
-        params.put("tool", toolName);
-
-        ObjectNode args = mapper.createObjectNode();
-        args.put(argKey, argValue);
-
-        params.set("arguments", args);
-        req.set("params", params);
-
-        session.getAsyncRemote().sendText(req.toString());
+    @Override
+    public void onError(Session session, Throwable thr) {
+        System.err.println("💥 Error: " + thr.getMessage());
+        thr.printStackTrace();
     }
 
+    // Message handler
     @OnMessage
     public void onMessage(String message) {
-        System.out.println("📩 MCP Message: " + message);
+        System.out.println("📩 Received: " + message);
+    }
+
+    public static void main(String[] args) throws Exception {
+        String token = System.getenv("GITHUB_TOKEN");
+        if (token == null || token.isBlank()) {
+            System.err.println("⚠️ Please set the GITHUB_TOKEN environment variable.");
+            return;
+        }
+
+        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+
+        // Add required headers
+        ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
+                .configurator(new ClientEndpointConfig.Configurator() {
+                    @Override
+                    public void beforeRequest(java.util.Map<String, java.util.List<String>> headers) {
+                        headers.put("Authorization", Collections.singletonList("Bearer " + token));
+                        headers.put("Sec-WebSocket-Protocol", Collections.singletonList("jsonrpc")); // 🔑 required
+                    }
+                }).build();
+
+        // Connect with headers + protocol
+        container.connectToServer(
+                new MCPJavaClient(),
+                config,
+                URI.create("wss://api.githubcopilot.com/mcp/")
+        );
     }
 }

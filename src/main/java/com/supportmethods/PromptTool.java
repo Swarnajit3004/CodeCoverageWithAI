@@ -15,7 +15,7 @@ public class PromptTool {
 
         switch (name.toLowerCase()) {
             case "repogreeting":
-                result.put("text", "👋 Hello " + user + ", welcome to MCP inside CodeCoverageWithAI!");
+                result.put("text", "Hello " + user + ", welcome to MCP inside CodeCoverageWithAI!");
                 break;
 
             case "abcd":

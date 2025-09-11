@@ -52,21 +52,10 @@
 
         <!-- WebSocket server implementation -->
         <dependency>
-            <groupId>org.glassfish.tyrus</groupId>
-            <artifactId>tyrus-client</artifactId>
-            <version>1.18</version>
+            <groupId>org.glassfish.tyrus.bundles</groupId>
+            <artifactId>tyrus-standalone-client</artifactId>
+            <version>2.2.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.glassfish.tyrus</groupId>
-            <artifactId>tyrus-server</artifactId>
-            <version>1.18</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.tyrus</groupId>
-            <artifactId>tyrus-container-grizzly-server</artifactId>
-            <version>1.18</version>
-        </dependency>
-
         <!-- JSON handling -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -129,22 +118,22 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>3.2.6</version>
             </plugin>
+<!--            <plugin>-->
+<!--                <groupId>org.codehaus.mojo</groupId>-->
+<!--                <artifactId>exec-maven-plugin</artifactId>-->
+<!--                <version>3.1.0</version>-->
+<!--                <configuration>-->
+<!--                    &lt;!&ndash; Default class to run &ndash;&gt;-->
+<!--                    <mainClass>com.mcpjava.MCPJavaServer</mainClass>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
                     <!-- Default class to run -->
-                    <mainClass>com.mcpjava.MCPJavaServer</mainClass>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <!-- Default class to run -->
-                    <mainClass>com.mcpjava.MCPJavaServer</mainClass>
+                    <mainClass>com.mcpjava.MCPJavaClient</mainClass>
                 </configuration>
             </plugin>
         </plugins>
